@@ -1,0 +1,40 @@
+version: '3'
+
+services:
+  red:
+    image: redis:latest
+  worker:
+    build: .
+    image: example-task:latest
+    command: /bin/bash -c "sleep 3; rq worker --url redis://red:6379/1"
+    networks:
+      - coordinator
+      - default
+    volumes:
+      - .:/app
+    depends_on:
+      - red
+    external_links:
+      - kfapireleasecoordinator_coordinator_1:coordinator
+  task:
+    build: .
+    image: example-task:latest
+    command: /bin/bash -c "sleep 3; flask run -h 0.0.0.0 -p 8282"
+    networks:
+      - coordinator
+      - default
+    environment:
+      - REDIS_PORT=6379
+      - REDIS_HOST=red
+    ports:
+      - "8282:8282"
+    external_links:
+      - kfapireleasecoordinator_coordinator_1:coordinator
+    volumes:
+      - .:/app
+    depends_on:
+      - red
+networks:
+  coordinator:
+    external:
+      name: kfapireleasecoordinator_default
